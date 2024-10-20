@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="display-4">Capture History</h1>
+<p class="lead">All Captured photos</p>
+<div class="row">
+  {% for file in jpeg_files %}
+  <div class="col-md-4">
+    <div class="card text-bg-light mb-3" style="max-width: 50rem;">
+      <img src="{{ url_for('static', filename='uploads/' + file) }}" class="card-img">
+      <div class="card-img-overlay">
+        <h5 class="card-title">Current View</h5>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

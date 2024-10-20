@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1 class="display-4">Welcome Back!</h1>
+  <p class="lead">Reload the page to check the most recent image from your smart feeder.</p>
+  <div class="card text-bg-light" style="max-width: 50rem;">
+    <img src="static/uploads/current/now.jpeg" class="card-img">
+    <div class="card-img-overlay">
+      <h5 class="card-title">Current View</h5>
+      <p class="card-text"><small id="timeCounter">Last updated 0 seconds ago</small></p>
+    </div>
+  </div>
+
+  <script>
+    let startTime = new Date().getTime(); // Record the time when the page loads
+
+    function updateTime() {
+      let now = new Date().getTime(); // Get current time
+      let elapsed = Math.floor((now - startTime) / 1000); // Time in seconds since page load
+
+      let minutes = Math.floor(elapsed / 60); // Convert seconds to minutes
+      let seconds = elapsed; // Get remaining seconds
+
+      // Update the timeCounter element with the new time
+      document.getElementById('timeCounter').innerText = `${seconds} seconds ago`;
+    }
+
+    // Update the counter every second
+    setInterval(updateTime, 1000);
+  </script>
+{% endblock %}
