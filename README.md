@@ -1,4 +1,5 @@
 # smart-bird-feeder
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/I2I2150Y2E)
 > [!NOTE]  
 > Ongoing Project ...
 
