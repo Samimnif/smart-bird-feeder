@@ -15,3 +15,6 @@ Here are some snapshots of the current webserver
 
 ### History Page
 ![History page](/zreadme/Screenshot%202024-10-20%20001619.png)
+
+### Stats Page
+![stats page](/zreadme/stats-sc.png)

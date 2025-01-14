@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 {% block content %}
 <h1 class="display-4">Capture History</h1>
-<p class="lead">All Captured photos</p>
+<p class="lead">All Captured Photos</p>
 <div class="row">
-  {% for file in jpeg_files %}
+  {% for file in files %}
   <div class="col-md-4">
     <div class="card text-bg-light mb-3" style="max-width: 50rem;">
-      <img src="{{ url_for('static', filename='uploads/' + file) }}" class="card-img">
+      <img src="{{ url_for('static', filename='uploads/' + file.name) }}" class="card-img">
       <div class="card-img-overlay">
-        <h5 class="card-title">Current View</h5>
+        <h5 class="card-title">Captured: {{ file.timestamp }}</h5>
       </div>
     </div>
   </div>

@@ -24,15 +24,59 @@ def main_page():
 
 @app.route('/stats')
 def stats_page():
-       
-    return render_template('stats.html', title="Stats")
+    files = [
+        datetime.datetime.fromtimestamp(os.path.getmtime(os.path.join(UPLOAD_FOLDER, f)))
+        for f in os.listdir(UPLOAD_FOLDER) if f.endswith('.jpeg')
+    ]
+    now = datetime.datetime.now()
+
+    # Calculate hourly stats for all-time
+    hourly_stats_all_time = [0] * 24
+    for file_time in files:
+        hourly_stats_all_time[file_time.hour] += 1
+
+    # Calculate weekly stats for all-time
+    weekly_stats_all_time = [0] * 7  # Monday = 0, Sunday = 6
+    for file_time in files:
+        weekly_stats_all_time[file_time.weekday()] += 1
+
+    # Filter files for the past day
+    past_day_files = [f for f in files if (now - f).days == 0]
+    hourly_stats_past_day = [0] * 24
+    for file_time in past_day_files:
+        hourly_stats_past_day[file_time.hour] += 1
+
+    # Filter files for the past week
+    past_week_files = [f for f in files if (now - f).days < 7]
+    daily_stats_past_week = [0] * 7  # Monday = 0, Sunday = 6
+    for file_time in past_week_files:
+        daily_stats_past_week[file_time.weekday()] += 1
+
+    return render_template(
+        'stats.html', 
+        title="Stats",
+        hourly_stats_all_time=hourly_stats_all_time,
+        weekly_stats_all_time=weekly_stats_all_time,
+        hourly_stats_past_day=hourly_stats_past_day,
+        daily_stats_past_week=daily_stats_past_week
+    ) 
 
 @app.route('/history')
 def history_page():
-    for i in os.listdir("./static/uploads/"):
+    '''for i in os.listdir("./static/uploads/"):
         print(i)
     jpeg_files = [f for f in os.listdir(UPLOAD_FOLDER) if f.endswith('.jpeg')]
-    return render_template('history.html', title="History", jpeg_files=jpeg_files)
+    return render_template('history.html', title="History", jpeg_files=jpeg_files)'''
+    files = [
+        {
+            'name': f,
+            'timestamp': datetime.datetime.fromtimestamp(os.path.getmtime(os.path.join(UPLOAD_FOLDER, f))).strftime("%Y-%m-%d %H:%M:%S")
+        }
+        for f in os.listdir(UPLOAD_FOLDER) if f.endswith('.jpeg')
+    ]
+    # Sort by modification time (newest first)
+    files = sorted(files, key=lambda x: x['timestamp'], reverse=True)
+    return render_template('history.html', title="History", files=files)
 
 
 @app.route('/upload', methods=['POST'])

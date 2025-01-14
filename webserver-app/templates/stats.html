@@ -1,18 +1,94 @@
 {% extends "base.html" %}
 {% block content %}
-  <h1 class="display-4">Stats Page</h1>
-  <p class="lead">Here you can view various statistics about the system.</p>
-  <!-- You can display statistics here -->
-  <div class="card mt-3">
-    <div class="card-body">
-      <h5 class="card-title">Statistic 1</h5>
-      <p class="card-text">Details about stat 1.</p>
-    </div>
+<h1 class="display-4">Stats</h1>
+<p class="lead">View image upload statistics.</p>
+<div class="row">
+  <!-- All-Time Hourly Stats -->
+  <div class="col-md-6">
+    <canvas id="hourlyChartAllTime"></canvas>
   </div>
-  <div class="card mt-3">
-    <div class="card-body">
-      <h5 class="card-title">Statistic 2</h5>
-      <p class="card-text">Details about stat 2.</p>
-    </div>
+  <!-- All-Time Weekly Stats -->
+  <div class="col-md-6">
+    <canvas id="weeklyChartAllTime"></canvas>
   </div>
+</div>
+
+<div class="row mt-4">
+  <!-- Past Day Hourly Stats -->
+  <div class="col-md-6">
+    <canvas id="hourlyChartPastDay"></canvas>
+  </div>
+  <!-- Past Week Daily Stats -->
+  <div class="col-md-6">
+    <canvas id="weeklyChartPastWeek"></canvas>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // Data from Flask
+  const hourlyStatsAllTime = {{ hourly_stats_all_time | safe }};
+  const weeklyStatsAllTime = {{ weekly_stats_all_time | safe }};
+  const hourlyStatsPastDay = {{ hourly_stats_past_day | safe }};
+  const dailyStatsPastWeek = {{ daily_stats_past_week | safe }};
+
+  // Chart.js Configurations
+  const chartConfigs = [
+    {
+      elementId: 'hourlyChartAllTime',
+      label: 'Images Uploaded Per Hour (All-Time)',
+      labels: Array.from({ length: 24 }, (_, i) => i + ':00'),
+      data: hourlyStatsAllTime,
+      backgroundColor: 'rgba(75, 192, 192, 0.6)',
+      borderColor: 'rgba(75, 192, 192, 1)',
+    },
+    {
+      elementId: 'weeklyChartAllTime',
+      label: 'Images Uploaded Per Day (All-Time)',
+      labels: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+      data: weeklyStatsAllTime,
+      backgroundColor: 'rgba(153, 102, 255, 0.6)',
+      borderColor: 'rgba(153, 102, 255, 1)',
+    },
+    {
+      elementId: 'hourlyChartPastDay',
+      label: 'Images Uploaded Per Hour (Past Day)',
+      labels: Array.from({ length: 24 }, (_, i) => i + ':00'),
+      data: hourlyStatsPastDay,
+      backgroundColor: 'rgba(255, 159, 64, 0.6)',
+      borderColor: 'rgba(255, 159, 64, 1)',
+    },
+    {
+      elementId: 'weeklyChartPastWeek',
+      label: 'Images Uploaded Per Day (Past Week)',
+      labels: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+      data: dailyStatsPastWeek,
+      backgroundColor: 'rgba(54, 162, 235, 0.6)',
+      borderColor: 'rgba(54, 162, 235, 1)',
+    }
+  ];
+
+  // Initialize Charts
+  chartConfigs.forEach(config => {
+    new Chart(document.getElementById(config.elementId), {
+      type: 'bar',
+      data: {
+        labels: config.labels,
+        datasets: [{
+          label: config.label,
+          data: config.data,
+          backgroundColor: config.backgroundColor,
+          borderColor: config.borderColor,
+          borderWidth: 1,
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    });
+  });
+</script>
 {% endblock %}
