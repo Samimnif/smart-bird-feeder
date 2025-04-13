@@ -17,13 +17,16 @@ import time
 import gifio
 #import ulab.numpy as np
 import displayio
-import gc
+#import gc
+import analogio
+import alarm
 
 print("MEMENTO Birdfeeder Camera")
 
 
 # Prepare the URL and headers for the POST request
 url = "http://192.168.68.85:5000/upload"
+url_volatge = "http://192.168.68.85:5000/upload_voltage"
 urlgif = "http://192.168.68.85:5000/upload_gif"
 headers = {
     "Content-Type": "application/json"
@@ -48,6 +51,19 @@ pycam.autofocus_vcm_step = 145
 pir = digitalio.DigitalInOut(board.A0)
 pir.direction = digitalio.Direction.INPUT
 
+battery = analogio.AnalogIn(board.BATTERY_MONITOR)
+
+def get_voltage(pin):
+    return (pin.value * 3.3) / 65535 * 2
+
+voltage = get_voltage(battery)
+print("Battery voltage: {:.2f} V".format(voltage))
+
+def create_alarm(deep):
+    if deep:
+        return alarm.time.TimeAlarm(monotonic_time=time.monotonic() + 46800)
+    return alarm.time.TimeAlarm(monotonic_time=time.monotonic() + 20)
+
 def get_most_recent_file(directory):
     recent_file = None
     recent_time = 0
@@ -70,9 +86,22 @@ def send_jpeg_to_server(jpeg):
     "image": encoded_data.decode('utf-8')  # Convert bytes to string for JSON
     }
     #io.send_data(feed_camera["key"], encoded_data)
-    response = requests.post(url, json=json_payload, headers=headers)
-    print(response)
-    print("Sent image to Server!")
+    try:
+        response = requests.post(url, json=json_payload, headers=headers)
+        print(response)
+        print("Sent image to Server!")
+    except Exception as e:
+        print(f"POST Socket error for Image Upload: {e}")
+
+def send_volatge():
+    json_payload = {
+    "voltage": get_voltage(battery)  # Convert bytes to string for JSON
+    }
+    try:
+        response = requests.post(url_volatge, json=json_payload, headers=headers)
+        print("Sent Volatge to server: ",response)
+    except Exception as e:
+        print(f"POST Socket error for Volatge Upload: {e}") 
     
 def send_gif_to_server(gif_path):
     try:
@@ -102,53 +131,64 @@ def test_camera():
     else:
         print("ERROR: JPEG capture failed!")
 
-def create_gif():
-    try:
-        f = pycam.open_next_image("gif")
-    except RuntimeError as e:
-        pycam.display_message("Error\nNo SD Card", color=0xFF0000)
-        time.sleep(0.5)
-        return
-    
-    i = 0
-    ft = []
-    pycam.continuous_capture_start()
+# def create_gif():
+#     try:
+#         f = pycam.open_next_image("gif")
+#     except RuntimeError as e:
+#         pycam.display_message("Error\nNo SD Card", color=0xFF0000)
+#         time.sleep(0.5)
+#         return
+#     
+#     i = 0
+#     ft = []
+#     pycam.continuous_capture_start()
+# 
+#     pycam.display.refresh()
+#     g=None
+#     with gifio.GifWriter(
+#         f,
+#         pycam.camera.width,
+#         pycam.camera.height,
+#         displayio.Colorspace.RGB565_SWAPPED,
+#         dither=True,
+#     ) as g:
+#         t00 = t0 = time.monotonic()
+#         i=0
+#         while (i < 15):
+#             print(i," Recording")
+#             i += 1
+#             _gifframe = pycam.continuous_capture()
+#             print(_gifframe)
+#             g.add_frame(_gifframe, 0.12)
+#             pycam.blit(_gifframe)
+#             t1 = time.monotonic()
+#             ft.append(1 / (t1 - t0))
+#             print(end=".")
+#             t0 = t1
+#     print(f"\nfinal size {f.tell()} for {i} frames")
+#     print(f"average framerate {i/(t1-t00)}fps")
+#     print(type(f))
+#     f.close()
+#     g.deinit()
+#     g = None
+#     gc.collect()
+#     pycam.display.refresh()
 
-    pycam.display.refresh()
-    g=None
-    with gifio.GifWriter(
-        f,
-        pycam.camera.width,
-        pycam.camera.height,
-        displayio.Colorspace.RGB565_SWAPPED,
-        dither=True,
-    ) as g:
-        t00 = t0 = time.monotonic()
-        i=0
-        while (i < 15):
-            print(i," Recording")
-            i += 1
-            _gifframe = pycam.continuous_capture()
-            print(_gifframe)
-            g.add_frame(_gifframe, 0.12)
-            pycam.blit(_gifframe)
-            t1 = time.monotonic()
-            ft.append(1 / (t1 - t0))
-            print(end=".")
-            t0 = t1
-    print(f"\nfinal size {f.tell()} for {i} frames")
-    print(f"average framerate {i/(t1-t00)}fps")
-    print(type(f))
-    f.close()
-    g.deinit()
-    g = None
-    gc.collect()
-    pycam.display.refresh()
 
 brightness_set = False
 old_pir_value = pir.value
 while True:
+    now = time.localtime()
+    print(now.tm_hour, now.tm_min)
+    if now.tm_hour == 19 and now.tm_min >= 0:
+        print("It's exactly 19:00 (7:00 PM)! Going to Sleep")
+        time_alarm = create_alarm(True)
+        alarm.exit_and_deep_sleep_until_alarms(time_alarm)
+
     pycam.keys_debounce()
+    send_volatge()
+    time_alarm = create_alarm(False)
+    alarm.light_sleep_until_alarms(time_alarm)
     pir_value = pir.value
     # if we detect movement, take a photo
     if pir_value:
@@ -177,3 +217,4 @@ while True:
     elif pycam.left.fell:
         create_gif()
         send_gif_to_server(get_most_recent_file("/sd"))
+    

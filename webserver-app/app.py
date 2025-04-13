@@ -4,12 +4,15 @@ from werkzeug.utils import secure_filename
 import base64
 import datetime
 import uuid
+from sql_database import *
 
 app = Flask(__name__)
 
 UPLOAD_FOLDER = 'static/uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB limit
+
+db = VoltageDB()
 
 # Allowed image extensions
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
@@ -52,31 +55,83 @@ def stats_page():
     for file_time in past_week_files:
         daily_stats_past_week[file_time.weekday()] += 1
 
+    voltages_24h = db.get_voltages_last_24_hours()
+    voltages_7d = db.get_voltages_last_7_days()
+    print(voltages_7d)
+
     return render_template(
         'stats.html', 
         title="Stats",
         hourly_stats_all_time=hourly_stats_all_time,
         weekly_stats_all_time=weekly_stats_all_time,
         hourly_stats_past_day=hourly_stats_past_day,
-        daily_stats_past_week=daily_stats_past_week
+        daily_stats_past_week=daily_stats_past_week,
+        voltages_24h=voltages_24h,
+        voltages_7d=voltages_7d
     ) 
 
+@app.route('/upload_voltage', methods=['POST'])
+def upload_voltage():
+    try:
+        data = request.get_json()
+        voltage = float(data.get("voltage"))
+
+        if not isinstance(voltage, float):
+            return jsonify({"error": "Invalid voltage value"}), 400
+
+        db.insert_voltage(voltage)
+
+        return jsonify({"message": "Voltage saved"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# @app.route('/history')
+# def history_page():
+#     '''for i in os.listdir("./static/uploads/"):
+#         print(i)
+#     jpeg_files = [f for f in os.listdir(UPLOAD_FOLDER) if f.endswith('.jpeg')]
+#     return render_template('history.html', title="History", jpeg_files=jpeg_files)'''
+#     print("Current Working Directory:", os.getcwd())
+#     files = [
+#         {
+#             'name': f,
+#             'timestamp': datetime.datetime.fromtimestamp(os.path.getmtime(os.path.join(UPLOAD_FOLDER, f))).strftime("%Y-%m-%d %H:%M:%S")
+#         }
+#         for f in os.listdir(UPLOAD_FOLDER) if f.endswith('.jpeg')
+#     ]
+#     # Sort by modification time (newest first)
+#     files = sorted(files, key=lambda x: x['timestamp'], reverse=True)
+#     return render_template('history.html', title="History", files=files)
+
 @app.route('/history')
-def history_page():
-    '''for i in os.listdir("./static/uploads/"):
-        print(i)
-    jpeg_files = [f for f in os.listdir(UPLOAD_FOLDER) if f.endswith('.jpeg')]
-    return render_template('history.html', title="History", jpeg_files=jpeg_files)'''
-    files = [
-        {
-            'name': f,
-            'timestamp': datetime.datetime.fromtimestamp(os.path.getmtime(os.path.join(UPLOAD_FOLDER, f))).strftime("%Y-%m-%d %H:%M:%S")
-        }
-        for f in os.listdir(UPLOAD_FOLDER) if f.endswith('.jpeg')
-    ]
-    # Sort by modification time (newest first)
-    files = sorted(files, key=lambda x: x['timestamp'], reverse=True)
-    return render_template('history.html', title="History", files=files)
+def history():
+    page = int(request.args.get('page', 1))
+    per_page = 99
+    files = []
+
+    for filename in sorted(os.listdir(UPLOAD_FOLDER), reverse=True):
+        if filename.endswith(".jpeg") or filename.endswith(".png"):
+            path = os.path.join(UPLOAD_FOLDER, filename)
+            timestamp = datetime.datetime.fromtimestamp(os.path.getctime(path)).strftime('%Y-%m-%d %H:%M:%S')
+            files.append({'name': filename, 'timestamp': timestamp})
+
+    total = len(files)
+    start = (page - 1) * per_page
+    end = start + per_page
+    has_next = end < total
+
+    total_pages = total//per_page
+
+    return render_template('history.html', files=files[start:end], page=page, has_next=has_next, total=total_pages)
+
+@app.route('/delete/<filename>', methods=['DELETE'])
+def delete_file(filename):
+    try:
+        os.remove(os.path.join(UPLOAD_FOLDER, filename))
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"Error deleting file: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @app.route('/upload', methods=['POST'])

@@ -2,16 +2,74 @@
 {% block content %}
 <h1 class="display-4">Capture History</h1>
 <p class="lead">All Captured Photos</p>
-<div class="row">
+
+<div class="mb-3">
+  <button class="btn btn-outline-danger" onclick="toggleDeleteButtons()">Edit</button>
+</div>
+
+<nav aria-label="...">
+  <ul class="pagination">
+    <li class="page-item {% if page == 1 %} disabled {% endif %}">
+      <a class="page-link" href="{{ url_for('history', page=page-1) }}">Previous</a>
+    </li>
+    {% for i in range(1, total+1)%}
+    <li class="page-item {% if i == page %}active{% endif %}"><a class="page-link"
+        href="{{ url_for('history', page=i) }}">{{ i }}</a></li>
+    {% endfor %}
+    <li class="page-item {% if not has_next %} disabled {% endif %}">
+      <a class="page-link" href="{{ url_for('history', page=page+1) }}">Next</a>
+    </li>
+  </ul>
+</nav>
+
+<div class="row" id="image-grid">
   {% for file in files %}
-  <div class="col-md-4">
+  <div class="col-md-4" id="card-{{ file.name }}">
     <div class="card text-bg-light mb-3" style="max-width: 50rem;">
       <img src="{{ url_for('static', filename='uploads/' + file.name) }}" class="card-img">
-      <div class="card-img-overlay">
+      <div class="card-img-overlay "><!-- d-flex flex-column justify-content-end -->
         <h5 class="card-title">Captured: {{ file.timestamp }}</h5>
+        <button class="btn btn-danger btn-sm mt-2 delete-btn d-none"
+          onclick="deleteImage('{{ file.name }}')">Delete</button>
       </div>
     </div>
   </div>
   {% endfor %}
 </div>
+
+<!-- <div class="d-flex justify-content-center mt-4">
+  {% if has_next %}
+  <a href="{{ url_for('history', page=page+1) }}" class="btn btn-primary">Next Page</a>
+  {% endif %}
+  {% if page > 1 %}
+  <a href="{{ url_for('history', page=page-1) }}" class="btn btn-secondary ms-2">Previous Page</a>
+  {% endif %}
+</div> -->
+
+<script>
+  function toggleDeleteButtons() {
+    const buttons = document.querySelectorAll('.delete-btn');
+    buttons.forEach(btn => {
+      btn.classList.toggle('d-none');
+    });
+  }
+
+
+  function deleteImage(filename) {
+    fetch(`/delete/${filename}`, {
+      method: 'DELETE'
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          document.getElementById(`card-${filename}`).remove();
+        } else {
+          alert("Failed to delete: " + data.error);
+        }
+      })
+      .catch(err => {
+        alert("An error occurred: " + err);
+      });
+  }
+</script>
 {% endblock %}
