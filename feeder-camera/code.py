@@ -177,18 +177,22 @@ def test_camera():
 
 brightness_set = False
 old_pir_value = pir.value
+send_interval = time.monotonic() + 60
 while True:
     now = time.localtime()
-    print(now.tm_hour, now.tm_min)
+
     if now.tm_hour == 19 and now.tm_min >= 0:
         print("It's exactly 19:00 (7:00 PM)! Going to Sleep")
         time_alarm = create_alarm(True)
         alarm.exit_and_deep_sleep_until_alarms(time_alarm)
 
     pycam.keys_debounce()
-    send_volatge()
-    time_alarm = create_alarm(False)
-    alarm.light_sleep_until_alarms(time_alarm)
+    if send_interval == time.monotonic():
+        send_volatge()
+        send_interval = time.monotonic() + 60
+        
+    #time_alarm = create_alarm(False)
+    #alarm.light_sleep_until_alarms(time_alarm)
     pir_value = pir.value
     # if we detect movement, take a photo
     if pir_value:
@@ -214,7 +218,7 @@ while True:
         else:
             pycam.display.brightness = 1.0
         brightness_set = not brightness_set
-    elif pycam.left.fell:
-        create_gif()
-        send_gif_to_server(get_most_recent_file("/sd"))
+    # elif pycam.left.fell:
+    #     create_gif()
+    #     send_gif_to_server(get_most_recent_file("/sd"))
     
